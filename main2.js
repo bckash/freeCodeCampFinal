@@ -7,7 +7,7 @@ function checkCashRegister(price, cash, cid) {
   //-------------------------------------------
 
     let change = cash-price;
-    let changeFromPrevious = 0;   // this var for recursion to work, in calculateChangeInUnits(). "change" is seperated in two parts
+    let changeFromPrevious = 0;   // this var for recursion to work, in calculateChangeInUnits(). 
     let changeInUnits = []
     let unitIndex;
     let cidSUM = cid.reduce((total, current) => (total*100 + current[1]*100)/100, 0)
@@ -57,12 +57,14 @@ function checkCashRegister(price, cash, cid) {
         },
     ]
 
+
   //-------------------------------------------
   // functions declaration
   //-------------------------------------------
 
     // [for calculateChange] 
-    function printResult(i) {
+    // ---> before recursion
+    function printStatus(i) {
         console.log("")
         console.log("- - - - - - - - - - - - - - - ")
         Object.values(showResults[i]).map( item => console.log(item))
@@ -72,99 +74,89 @@ function checkCashRegister(price, cash, cid) {
 
     // [for calculateChange] 
     function closestUnitIndex () {
-      
         let oneBigger = changeTable.find( cur => change <= cur[1])
         let cidIndex = changeTable.indexOf(oneBigger)-1
-    
         return cidIndex
-      }
+    }
     
 
-    // ---> calculate change
+    // ---> calculate all of the change
     function calculateChangeInUnits(change, changeFromPrevious, unitIndex){
 
+        let unit = changeTable[unitIndex]
+        let unitCidAmount = cid[unitIndex][1]
+        let changeInUnit = parseInt(change/unit[1])*unit[1] + changeFromPrevious
+        let changeRemaining = ((change*1000 + changeFromPrevious*1000) - changeInUnit*1000)/1000
+        let unitCidBallance = unitCidAmount - changeInUnit
+
+        // >> control panel <<
         console.log("change = "+change)
         console.log("change from previous unit = "+changeFromPrevious)
         console.log("changeInUnits = "+changeInUnits)
         console.log("-------------")
-
-        console.log("unitIndex = "+unitIndex)
-
-        let unit = changeTable[unitIndex]
         console.log("unit : "+unit)
-
-        let unitCidAmount = cid[unitIndex][1]
+        console.log("unitIndex = "+unitIndex)
         console.log("unitCidAmount = "+unitCidAmount)
         console.log("-------------")
-
-        let changeInUnit = parseInt(change/unit[1])*unit[1] + changeFromPrevious
         console.log("changeInUnit = "+changeInUnit)
         console.log(">------------>>>")
-
-        let changeRemaining = ((change*1000 + changeFromPrevious*1000) - changeInUnit*1000)/1000
         console.log("changeRemaining = "+changeRemaining)
-
-        let unitCidBallance = unitCidAmount - changeInUnit
         console.log("unitCidBallance = "+unitCidBallance)
+        // >> control panel <<
 
+        // 1. 
+        if (changeRemaining === 0) {
 
-        // 1. no change remaining and is money in CID this unit 
-        if (changeRemaining === 0 && unitCidBallance > 0) {
-            printResult(0)
+            // a) & is money in CID this unit
+            if (unitCidBallance > 0) {
 
-            changeInUnits.push([unit[0], changeInUnit])
+                printStatus(0)
+                changeInUnits.push([unit[0], changeInUnit])
+                let changeInActiveUnits = changeInUnits.filter(arr => arr[1]) 
+                return {status: "OPEN", change: changeInActiveUnits}
 
-            let changeInActiveUnits = changeInUnits.filter(arr => arr[1])
+            // b) & no money in CID this unit
+            } else if (unitCidBallance < 0) {
 
-            return {status: "OPEN", change: changeInActiveUnits}
+                printStatus(3)
+                change = Math.abs(unitCidBallance)
+                changeFromPrevious = 0
+                unitIndex = unitIndex-1
+    
+                if (unitIndex < 0) {
+                    printStatus(4)
+                    return 
+                }
+    
+                calculateChangeInUnits(change, changeFromPrevious, unitIndex)
+                return {status: "INSUFFICIENT_FUNDS", change: []}
+            }
 
-        // 2. change remaining and not enough money in CID this unit 
-        } else if (changeRemaining !== 0 && unitCidBallance < 0) {
-            printResult(1)
+        // 2.
+        } else if (changeRemaining !== 0) {
 
-            changeInUnits.push([unit[0], unitCidAmount])
+            // a) & not enough money in CID this unit 
+            if (unitCidBallance < 0) {
 
-            change = changeRemaining;
-            changeFromPrevious = Math.abs(unitCidBallance);
-            unitIndex = unitIndex-1
+                printStatus(1)
+                changeInUnits.push([unit[0], unitCidAmount])
+                change = changeRemaining;
+                changeFromPrevious = Math.abs(unitCidBallance);
+                unitIndex = unitIndex-1
+    
+            // b) and there is money in CID this unit
+            } else if (unitCidBallance > 0) {
 
-            calculateChangeInUnits(change, changeFromPrevious, unitIndex)
-
-            let changeInActiveUnits = changeInUnits.filter(arr => arr[1])
-
-            return {status: "OPEN", change: changeInActiveUnits}
-
-        // 3. change remaining and there is money in CID this unit
-        } else if (changeRemaining !== 0 && unitCidBallance > 0) {
-            printResult(2)
-
-            changeInUnits.push([unit[0], changeInUnit])
-
-            change = changeRemaining;
-            changeFromPrevious = 0;
-            unitIndex = unitIndex-1
-
-            calculateChangeInUnits(change, changeFromPrevious, unitIndex)
-
-            let changeInActiveUnits = changeInUnits.filter(arr => arr[1])
-
-            return {status: "OPEN", change: changeInActiveUnits}
-
-        // 4. no change remaining and no money in CID this unit 
-        } else if (changeRemaining === 0 && unitCidBallance < 0) {
-            printResult(3)
-
-            change = Math.abs(unitCidBallance)
-            changeFromPrevious = 0
-            unitIndex = unitIndex-1
-
-            if (unitIndex < 0) {
-                printResult(4)
-                return 
+                printStatus(2)
+                changeInUnits.push([unit[0], changeInUnit])
+                change = changeRemaining;
+                changeFromPrevious = 0;
+                unitIndex = unitIndex-1
             }
 
             calculateChangeInUnits(change, changeFromPrevious, unitIndex)
-            return {status: "INSUFFICIENT_FUNDS", change: []}
+            let changeInActiveUnits = changeInUnits.filter(arr => arr[1])
+            return {status: "OPEN", change: changeInActiveUnits}
         }
     }
 
