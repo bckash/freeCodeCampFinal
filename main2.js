@@ -1,5 +1,16 @@
 
 
+/* 
+
+Cash Register App* 
+- freeCodeCamp project for "JavaScript Algorithms and Data Structures Projects" course. 
+______
+* author is aware that functions aren't fully abstracted and are operating on global values. For more professional use of this app - that would be corrected.
+
+*/
+
+
+
 function checkCashRegister(price, cash, cid) {
 
   //-------------------------------------------
@@ -7,9 +18,7 @@ function checkCashRegister(price, cash, cid) {
   //-------------------------------------------
 
     let change = cash-price;
-    let changeFromPrevious = 0;   // this var for recursion to work, in calculateChangeInUnits(). 
     let changeInUnits = []
-    let unitIndex;
     let cidSUM = cid.reduce((total, current) => (total*100 + current[1]*100)/100, 0)
 
     const changeTable = [ 
@@ -24,50 +33,55 @@ function checkCashRegister(price, cash, cid) {
         [ "ONE HUNDRED", 100 ] 
       ]
 
-    const showResults = [
+    const statusValues = [
         {
-            index : "     [1/5]",
-            status : "status : No change remaining and money in this unit (in CID)",
-            push : "push   : changeInUnit",
-            next : "next   : end result"
+            id : 1,
+            status : "No change remaining and money in this unit (in CID)",
+            push : "changeInUnit",
+            next : "end"
         },
         {
-            index : "     [2/5]",
-            status : "status : Change remaining and not enough money in this unit (in CID)",
-            push: "  push : unitCidAmount",
-            next : "  next : go to lower unit"
+            id : 2,
+            status : "Change remaining and not enough money in this unit (in CID)",
+            push: "unitCidAmount",
+            next : "go to lower unit"
         },
         {
-            index : "     [3/5]",
-            status : "status : change remaining and there is money in this unit (in CID)",
-            push: "  push : changeInUnit",
-            next : "  next : go to lower unit"
+            id : 3,
+            status : "change remaining and there is money in this unit (in CID)",
+            push: "changeInUnit",
+            next : "go to lower unit"
         },
         {
-            index : "     [4/5]",
-            status : "status : no change remaining and no money in CID this unit",
-            push: "  push : -",
-            next : "  next : go to lower unit"
+            id : 4,
+            status : "no change remaining and no money in CID this unit",
+            push: " - ",
+            next : "go to lower unit"
         },
         {
-            index : "     [5/5]",
-            status : "status : inuffiecient funds",
-            push: "  push : -",
-            next : "  next : end result"
+            id : 5,
+            status : "no more units",
+            push: " - ",
+            next : "end"
         },
     ]
 
 
   //-------------------------------------------
-  // functions declaration
+  // functions declaration 
   //-------------------------------------------
+
 
     // [for calculateChange] 
     // ---> before recursion
     function printStatus(i) {
         console.log("")
         console.log("- - - - - - - - - - - - - - - ")
-        Object.values(showResults[i]).map( item => console.log(item))
+
+        Object.keys(statusValues[i]).map( (item,index) => {
+            console.log(item + " : " + statusValues[i][item])
+        })
+
         console.log("- - - - - - - - - - - - - - - ")
         console.log("")
     }
@@ -79,19 +93,45 @@ function checkCashRegister(price, cash, cid) {
         return cidIndex
     }
     
+    // end result
+    function printCashRegister(status, change) {
+
+        let cashRegisterValues = {
+            open : {status: "OPEN", change: change},
+            closed: {status: "CLOSED", change: change},
+            if : {status: "INSUFFICIENT_FUNDS", change: change}
+        }
+
+        let cashRegisterReport;
+
+        switch (status) {
+            case "open":
+                cashRegisterReport = cashRegisterValues.open
+                break;
+            case "closed":
+                cashRegisterReport = cashRegisterValues.closed
+                break;
+            case "if":
+                cashRegisterReport = cashRegisterValues.if
+                break;
+        }
+
+        return cashRegisterReport;
+    }
 
     // ---> calculate all of the change
-    function calculateChangeInUnits(change, changeFromPrevious, unitIndex){
+    function calculateChangeInUnits(change, unitIndex){
 
+        // >> variables <<
         let unit = changeTable[unitIndex]
         let unitCidAmount = cid[unitIndex][1]
-        let changeInUnit = parseInt(change/unit[1])*unit[1] + changeFromPrevious
-        let changeRemaining = ((change*1000 + changeFromPrevious*1000) - changeInUnit*1000)/1000
+        let changeInUnit = parseInt(change/unit[1])*unit[1] 
+        let changeRemaining = (change*1000 - changeInUnit*1000)/1000
         let unitCidBallance = unitCidAmount - changeInUnit
+        // >> variables <<
 
         // >> control panel <<
         console.log("change = "+change)
-        console.log("change from previous unit = "+changeFromPrevious)
         console.log("changeInUnits = "+changeInUnits)
         console.log("-------------")
         console.log("unit : "+unit)
@@ -113,14 +153,13 @@ function checkCashRegister(price, cash, cid) {
                 printStatus(0)
                 changeInUnits.push([unit[0], changeInUnit])
                 let changeInActiveUnits = changeInUnits.filter(arr => arr[1]) 
-                return {status: "OPEN", change: changeInActiveUnits}
+                return printCashRegister("open", changeInActiveUnits)
 
             // b) & no money in CID this unit
             } else if (unitCidBallance < 0) {
 
                 printStatus(3)
                 change = Math.abs(unitCidBallance)
-                changeFromPrevious = 0
                 unitIndex = unitIndex-1
     
                 if (unitIndex < 0) {
@@ -128,8 +167,8 @@ function checkCashRegister(price, cash, cid) {
                     return 
                 }
     
-                calculateChangeInUnits(change, changeFromPrevious, unitIndex)
-                return {status: "INSUFFICIENT_FUNDS", change: []}
+                calculateChangeInUnits(change, unitIndex)
+                return printCashRegister("if", [])
             }
 
         // 2.
@@ -140,8 +179,7 @@ function checkCashRegister(price, cash, cid) {
 
                 printStatus(1)
                 changeInUnits.push([unit[0], unitCidAmount])
-                change = changeRemaining;
-                changeFromPrevious = Math.abs(unitCidBallance);
+                change = (changeRemaining*100 + Math.abs(unitCidBallance)*100)/100
                 unitIndex = unitIndex-1
     
             // b) and there is money in CID this unit
@@ -150,13 +188,12 @@ function checkCashRegister(price, cash, cid) {
                 printStatus(2)
                 changeInUnits.push([unit[0], changeInUnit])
                 change = changeRemaining;
-                changeFromPrevious = 0;
                 unitIndex = unitIndex-1
             }
 
-            calculateChangeInUnits(change, changeFromPrevious, unitIndex)
+            calculateChangeInUnits(change, unitIndex)
             let changeInActiveUnits = changeInUnits.filter(arr => arr[1])
-            return {status: "OPEN", change: changeInActiveUnits}
+            return printCashRegister("open",changeInActiveUnits)
         }
     }
 
@@ -166,21 +203,17 @@ function checkCashRegister(price, cash, cid) {
   //-------------------------------------------
 
 
-
     if (cidSUM === change) {
-        return {status: "CLOSED", change: cid}
+        return printCashRegister("closed", cid)
 
     } else if (cidSUM > 0) {
-        unitIndex = closestUnitIndex()
-        return calculateChangeInUnits(change, changeFromPrevious, unitIndex)
+        return calculateChangeInUnits(change, closestUnitIndex())
 
     } else if (cidSUM < 0) {
-        return {status: "INSUFFICIENT_FUNDS", change: []}
+        return printCashRegister("if", [])
     }
-
-
 }
 
-let x = checkCashRegister(3.26, 100, [["PENNY", 1.01], ["NICKEL", 2.05], ["DIME", 3.1], ["QUARTER", 4.25], ["ONE", 90], ["FIVE", 55], ["TEN", 20], ["TWENTY", 60], ["ONE HUNDRED", 100]])
+let x = checkCashRegister(19.5, 20, [["PENNY", 0.01], ["NICKEL", 0], ["DIME", 0], ["QUARTER", 0], ["ONE", 1], ["FIVE", 0], ["TEN", 0], ["TWENTY", 0], ["ONE HUNDRED", 0]])
 
 console.log(x)
